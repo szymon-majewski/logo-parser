@@ -70,10 +70,17 @@ enum CommandType
     SET_TURTLE
 }
 
+pub enum CodeBlockType
+{
+    PROCEDURE(Procedure),
+    LOOP(Loop),
+    IF(If)
+}
+
 pub enum ParserSymbol 
 {
     COMMAND(Command),
-    CODE_BLOCK(Box<dyn CodeBlock>)
+    CODE_BLOCK(CodeBlock)
 }
 
 struct Command
@@ -82,68 +89,60 @@ struct Command
     call_parameter: Expression
 }
 
-trait CodeBlock
+struct CodeBlock
 {
-    fn add_instruction(&self, instruction: ParserSymbol);
+    instructions: LinkedList<ParserSymbol>,
+    code_block_type: CodeBlockType
+}
+impl CodeBlock
+{
+    fn new(code_block_type: CodeBlockType) -> Self
+    {
+        Self { instructions: LinkedList::new(), code_block_type }
+    }
+    
+    pub fn add_instruction(&mut self, instruction: ParserSymbol) 
+    { 
+        self.instructions.push_back(instruction); 
+    }
 }
 
 pub struct Procedure
 {
-    instructions: LinkedList<ParserSymbol>,
     call_parameters: HashMap<String, Expression>
 }
-
 impl Procedure
 {
     fn new() -> Self
     {
-        Self { instructions: LinkedList::new(), call_parameters: HashMap::new() }
+        Self { call_parameters: HashMap::new() }
     }
 }
 
-// impl CodeBlock for Procedure
-// {
-//     fn add_instruction(&self, instruction: ParserSymbol) { self.instructions.push_back(instruction); }
-// }
-
 struct Loop
 {
-    instructions: LinkedList<ParserSymbol>,
     repeats: Expression,
     counter: usize
 }
-
 impl Loop
 {
     fn new(repeats: Expression) -> Self
     {
-        Self { instructions: LinkedList::new(), repeats, counter: 1 }
+        Self { repeats, counter: 1 }
     }
 }
 
-// impl CodeBlock for Loop
-// {
-//     fn add_instruction(&self, instruction: ParserSymbol) { self.instructions.push_back(instruction); }
-// }
-
 struct If
 {
-    instructions: LinkedList<ParserSymbol>,
     condition: Expression
 }
-
 impl If
 {
     fn new(condition: Expression) -> Self
     {
-        Self { instructions: LinkedList::new(), condition }
+        Self { condition }
     }
 }
-
-// impl CodeBlock for If
-// {
-//     fn add_instruction(&self, instruction: ParserSymbol) { self.instructions.push_back(instruction); }
-// }
 
 enum ParserState
 {
@@ -152,89 +151,90 @@ enum ParserState
     READING_PROCEDURE_PARAMETERS
 }
 
-// pub fn parse_logo_code(code: &str) -> HashMap<String, Procedure>
-// {
-//     let mut code_iterator = code.chars().peekable();
-//     let mut state = ParserState::READING_SYMBOL;
-//     let mut current_symbol = "".to_string();
+pub fn parse_logo_code(code: &str) -> HashMap<String, CodeBlock>
+{
+    let mut code_iterator = code.chars().peekable();
+    let mut state = ParserState::READING_SYMBOL;
+    let mut current_symbol = "".to_string();
 
-//     let MAIN_PROCEDURE_NAME = "_".to_string();
-//     let mut procedures: HashMap<String, Procedure> = HashMap::new();
-//     procedures.insert(MAIN_PROCEDURE_NAME.clone(), Procedure::new());
-//     let mut current_procedure_name = MAIN_PROCEDURE_NAME.clone();
-//     let mut code_block_stack: Vec<&dyn CodeBlock> = vec![procedures.get(&MAIN_PROCEDURE_NAME).unwrap()];
+    let MAIN_PROCEDURE_NAME = "_".to_string();
+    let mut procedures: HashMap<String, CodeBlock> = HashMap::new();
+    procedures.insert(MAIN_PROCEDURE_NAME.clone(), CodeBlock::new(CodeBlockType::PROCEDURE(Procedure::new())));
+    //let mut current_procedure_name = MAIN_PROCEDURE_NAME.clone();
+    let mut code_block_stack: Vec<&mut CodeBlock> = vec![procedures.get_mut(&MAIN_PROCEDURE_NAME).unwrap()];
 
-//     while let Some(ch) = code_iterator.next()
-//     {
-//         match state
-//         {
-//             ParserState::READING_SYMBOL => 
-//             {
-//                 if ch.is_whitespace()
-//                 {
-//                     if LOGO_SYMBOLS.contains(current_symbol.as_str())
-//                     {
-//                         match current_symbol.as_str()
-//                         {
-//                             "to" => { state = ParserState::READING_PROCEDURE_NAME; }
-//                             "end" => 
-//                             { 
-//                                 state = ParserState::READING_SYMBOL; 
-//                                 current_procedure_name = MAIN_PROCEDURE_NAME.clone();
-//                             }
-//                             "loop" =>
-//                             {
-//                                 let loop_repeats = read_expression(&mut code_iterator).iter().map(|s| s.as_str()).collect();
-//                                 let mut new_loop = Loop::new(Expression::new(loop_repeats));
-//                                 //code_block_stack.last().unwrap().add_instruction(new_loop);
-//                                 code_block_stack.push(&new_loop);
-//                             }
-//                             "if" =>
-//                             {
-//                                 let if_condition = read_expression(&mut code_iterator).iter().map(|s| s.as_str()).collect();
-//                                 let mut new_if = If::new(Expression::new(if_condition));
-//                                 //code_block_stack.last().unwrap().add_instruction(new_if);
-//                                 code_block_stack.push(&new_if);
-//                             }
-//                             _ => {}
-//                         }
-//                     }
-//                     else if COMMANDS.contains_key(current_symbol.as_str())
-//                     {
-//                         let parameter = read_expression(&mut code_iterator);
-//                     }
+    while let Some(ch) = code_iterator.next()
+    {
+        match state
+        {
+            ParserState::READING_SYMBOL => 
+            {
+                if ch.is_whitespace()
+                {
+                    if LOGO_SYMBOLS.contains(current_symbol.as_str())
+                    {
+                        match current_symbol.as_str()
+                        {
+                            "to" => { state = ParserState::READING_PROCEDURE_NAME; }
+                            "end" => 
+                            { 
+                                state = ParserState::READING_SYMBOL; 
+                                //current_procedure_name = MAIN_PROCEDURE_NAME.clone();
+                            }
+                            "loop" =>
+                            {
+                                let parsed_expression = read_expression(&mut code_iterator);
+                                let loop_repeats = parsed_expression.iter().map(|s| s.as_str()).collect();
+                                code_block_stack.last_mut()
+                                                .unwrap()
+                                                .add_instruction(ParserSymbol::CODE_BLOCK(CodeBlock::new(CodeBlockType::LOOP(Loop::new(Expression::new(loop_repeats))))));
+                            }
+                            "if" =>
+                            {
+                                let parsed_expression = read_expression(&mut code_iterator);
+                                let if_condition = parsed_expression.iter().map(|s| s.as_str()).collect();
+                                code_block_stack.last_mut()
+                                                .unwrap()
+                                                .add_instruction(ParserSymbol::CODE_BLOCK(CodeBlock::new(CodeBlockType::IF(If::new(Expression::new(if_condition))))));
+                            }
+                            _ => {}
+                        }
+                    }
+                    else if COMMANDS.contains_key(current_symbol.as_str())
+                    {
+                        let parameter = read_expression(&mut code_iterator);
+                    }
 
-//                     current_symbol.clear();
-//                 }
-//                 else 
-//                 {
-//                     current_symbol.push(ch);
-//                 }
-//             }
-//             ParserState::READING_PROCEDURE_NAME => 
-//             {
-//                 if ch.is_whitespace()
-//                 {
-//                     let mut new_procedure = Procedure::new();
-//                     procedures.insert(current_symbol.clone(), new_procedure);
-//                     current_procedure_name = current_symbol.clone();
-//                     code_block_stack.push(&new_procedure);
-//                     current_symbol.clear();
-//                 }
-//                 else 
-//                 {
-//                     current_symbol.push(ch);
-//                 }
-//             }
-//             ParserState::READING_PROCEDURE_PARAMETERS => 
-//             {
+                    current_symbol.clear();
+                }
+                else 
+                {
+                    current_symbol.push(ch);
+                }
+            }
+            ParserState::READING_PROCEDURE_NAME => 
+            {
+                if ch.is_whitespace()
+                {
+                    procedures.insert(current_symbol.clone(), CodeBlock::new(CodeBlockType::PROCEDURE(Procedure::new())));
+                    //current_procedure_name = current_symbol.clone();
+                    code_block_stack.push(procedures.get_mut(&current_symbol).unwrap());
+                    current_symbol.clear();
+                }
+                else 
+                {
+                    current_symbol.push(ch);
+                }
+            }
+            ParserState::READING_PROCEDURE_PARAMETERS => 
+            {
                 
-//             }
-//         }
-//     }
+            }
+        }
+    }
 
-//     procedures
-// }
+    procedures
+}
 
 pub fn read_expression(iter: &mut std::iter::Peekable<std::str::Chars<'_>>) -> Vec<String>
 {
