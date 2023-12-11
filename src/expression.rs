@@ -10,6 +10,7 @@ lazy_static!
         map.insert("-", 1i8);
         map.insert("*", 2i8);
         map.insert("/", 2i8);
+        map.insert("<", 0i8);
         map
     };
 }
@@ -38,7 +39,7 @@ impl Expression
         Self { postifx_symbol_list }
     }
 
-    pub fn evaluate(&self, variables: HashMap<String, i32>) -> i32
+    pub fn evaluate(&self, variables: &HashMap<String, i32>) -> i32
     {
         let mut stack: Vec<i32> = vec!();
         for symbol in self.postifx_symbol_list.iter()
@@ -51,6 +52,8 @@ impl Expression
                 }
                 ExpressionSymbol::VARIABLE(variable) =>
                 {
+                    // println!("{variable}");
+                    // println!("{:?}", variables);
                     stack.push(*variables.get(variable).unwrap());
                 }
                 ExpressionSymbol::OPERATOR(operator) =>
@@ -64,6 +67,7 @@ impl Expression
                         "-" => { stack.push(x - y); }
                         "*" => { stack.push(x * y); }
                         "/" => { stack.push(x / y); }
+                        "<" => { if x < y { stack.push(1); } else { stack.push(0); } }
                         _ => {}
                     }
                 }

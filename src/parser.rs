@@ -21,7 +21,7 @@ lazy_static!
         let mut set = HashMap::new();
         set.insert("forward", CommandType::FORWARD);
         set.insert("fd", CommandType::FORWARD);
-        set.insert("backward", CommandType::BACKWARD);
+        set.insert("back", CommandType::BACKWARD);
         set.insert("bk", CommandType::BACKWARD);
         set.insert("right", CommandType::TURN_RIGHT);
         set.insert("rt", CommandType::TURN_RIGHT);
@@ -47,10 +47,27 @@ lazy_static!
         set.insert("setturtle", CommandType::SET_TURTLE);
         set
     };
+
+    static ref COMMANDS_NO_PARAMETER: HashMap<&'static str, CommandType> = 
+    {
+        let mut set = HashMap::new();
+        set.insert("clearscreen", CommandType::CLEAR_SCREEN);
+        set.insert("cs", CommandType::CLEAR_SCREEN);
+        set.insert("penup", CommandType::PEN_UP);
+        set.insert("pu", CommandType::PEN_UP);
+        set.insert("pendown", CommandType::PEN_DOWN);
+        set.insert("pd", CommandType::PEN_DOWN);
+        set.insert("hideturtle", CommandType::HIDE_TURTLE);
+        set.insert("ht", CommandType::HIDE_TURTLE);
+        set.insert("showturtle", CommandType::SHOW_TURTLE);
+        set.insert("st", CommandType::SHOW_TURTLE);
+        set.insert("stop", CommandType::STOP);
+        set
+    };
 }
 
 #[derive(Clone, Copy)]
-enum CommandType
+pub enum CommandType
 {
     FORWARD,
     BACKWARD,
@@ -87,8 +104,8 @@ pub enum ParserSymbol
 
 pub struct Command
 {
-    command_type: CommandType,
-    call_parameter: Expression
+    pub command_type: CommandType,
+    pub call_parameter: Expression
 }
 impl Command
 {
@@ -190,6 +207,7 @@ pub fn parse_logo_code(code: &str) -> HashMap<String, CodeBlock>
 
     let MAIN_PROCEDURE_NAME = "_".to_string();
     let mut procedures: HashMap<String, CodeBlock> = HashMap::new();
+    let mut procedures_info: HashMap<String, i32> = HashMap::new();
     //procedures.insert(MAIN_PROCEDURE_NAME.clone(), CodeBlock::new(CodeBlockType::PROCEDURE(Procedure::new())));
     let mut current_procedure_name = MAIN_PROCEDURE_NAME.clone();
     let mut current_procedure = CodeBlock::new(CodeBlockType::PROCEDURE(Procedure::new()));
@@ -254,6 +272,11 @@ pub fn parse_logo_code(code: &str) -> HashMap<String, CodeBlock>
                             _ => {}
                         }
                     }
+                    else if COMMANDS_NO_PARAMETER.contains_key(current_symbol.as_str())
+                    {
+                        current_code_block.add_instruction(ParserSymbol::COMMAND(Command::new(*COMMANDS_NO_PARAMETER.get(current_symbol.as_str()).unwrap(),
+                                                                               Expression::new(vec!()))));
+                    }
                     else if COMMANDS.contains_key(current_symbol.as_str())
                     {
                         let parameter = read_expression(&mut code_iterator);
@@ -261,11 +284,19 @@ pub fn parse_logo_code(code: &str) -> HashMap<String, CodeBlock>
                         current_code_block.add_instruction(ParserSymbol::COMMAND(Command::new(*COMMANDS.get(current_symbol.as_str()).unwrap(),
                                                                                Expression::new(parameter_str))));
                     }
-                    else if procedures.contains_key(current_symbol.as_str())
+                    else if procedures_info.contains_key(current_symbol.as_str())
                     {
                         //TODO: read procedure parameters
-
-                        current_code_block.add_instruction(ParserSymbol::PROCEDURE_CALL(ProcedureCall{ procedure_name: current_symbol.clone(), /*redo*/ parameter_expressions: LinkedList::new()}));
+                        let call_parameters_count = *procedures_info.get(current_symbol.as_str()).unwrap();
+                        println!("{call_parameters_count}");
+                        let mut call_parameters = LinkedList::new();
+                        for _ in 0..call_parameters_count
+                        {
+                            let parameter = read_expression(&mut code_iterator);
+                            let parameter_str = parameter.iter().map(|s| s.as_str()).collect();
+                            call_parameters.push_back(Expression::new(parameter_str));
+                        }
+                        current_code_block.add_instruction(ParserSymbol::PROCEDURE_CALL(ProcedureCall{ procedure_name: current_symbol.clone(), parameter_expressions: call_parameters}));
                     }
                     current_symbol.clear();
                 }
@@ -273,6 +304,7 @@ pub fn parse_logo_code(code: &str) -> HashMap<String, CodeBlock>
                 {
                     current_code_block = &mut current_procedure;
                 }
+                else if ch == '[' {}
                 else 
                 {
                     current_symbol.push(ch);
@@ -303,8 +335,9 @@ pub fn parse_logo_code(code: &str) -> HashMap<String, CodeBlock>
                 {
                     if current_symbol.len() > 0
                     {
-                        if let CodeBlockType::PROCEDURE(ref mut procedure) = &mut current_code_block.code_block_type {
-                            procedure.call_parameters.insert(current_symbol.clone(), 0);
+                        if let CodeBlockType::PROCEDURE(ref mut procedure) = &mut current_code_block.code_block_type 
+                        {
+                            procedure.call_parameters.insert(current_symbol[1..].to_string(), 0);
                         }
                         current_symbol.clear();
                     }
@@ -317,9 +350,14 @@ pub fn parse_logo_code(code: &str) -> HashMap<String, CodeBlock>
                 {
                     state = ParserState::READING_SYMBOL;
                     current_symbol.push(ch);
+                    if let CodeBlockType::PROCEDURE(ref mut procedure) = &mut current_code_block.code_block_type 
+                    {
+                        procedures_info.insert(current_procedure_name.clone(), procedure.call_parameters.len() as i32);
+                    }
                 }
             }
         }
+        println!("{}",current_symbol.clone());
     }
     procedures.insert(current_procedure_name.clone(), current_procedure);
 

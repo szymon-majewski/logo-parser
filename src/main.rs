@@ -26,12 +26,18 @@ fn save_to_svg_file(file_path: &str, code: String)
 
 fn main() 
 {
-    let logo_file_paths = ["resources/star.logo",
-						   "resources/colored_squares.logo",
-						   "resources/logo_spiral.logo",
+    let logo_file_paths = [//"resources/star.logo",
+						   //"resources/colored_squares.logo",
+						   //"resources/logo_spiral.logo",
 						   "resources/tree.logo",
-						   "resources/fern.logo",
-						   "resources/turtle_race.logo",];
+						   //"resources/fern.logo",
+						   /*"resources/turtle_race.logo",*/];
+    let svg_file_paths = [//"svg/star.svg",
+						   //"svg/colored_squares.svg",
+						   //"svg/logo_spiral.svg",
+						   "svg/tree.svg",
+						   //"svg/fern.svg",
+						   /*"svg/turtle_race.svg",*/];
     let mut logo_codes: Vec<String> = vec!();
     for logo_file_path in logo_file_paths
     {
@@ -54,12 +60,10 @@ fn main()
         logo_parsed_codes.push(parsed_code);
     }
 
-    // star program
-    for logo_parsed_code in logo_parsed_codes
+    for logo_parsed_code_pair in logo_parsed_codes.into_iter().zip(svg_file_paths.into_iter())
     {
-        let svg_code = execute_logo_program(logo_parsed_code);
-        save_to_svg_file("svg/star.svg", svg_code);
-        break;
+        let svg_code = execute_logo_program(logo_parsed_code_pair.0);
+        save_to_svg_file(logo_parsed_code_pair.1, svg_code);
     }
     
     // let mut str = "5 +:var /( 12+:a) right 90".chars().peekable();
