@@ -52,8 +52,8 @@ impl Expression
                 }
                 ExpressionSymbol::VARIABLE(variable) =>
                 {
-                    // println!("{variable}");
-                    // println!("{:?}", variables);
+                    println!("{variable}");
+                    println!("{:?}", variables);
                     stack.push(*variables.get(variable).unwrap());
                 }
                 ExpressionSymbol::OPERATOR(operator) =>
@@ -165,5 +165,14 @@ impl Expression
         }
 
         postfix
+    }
+
+    pub fn text_literal(&self) -> String
+    {
+        if let ExpressionSymbol::VARIABLE(text) = self.postifx_symbol_list.front().unwrap()
+        {
+            return text.clone();
+        }
+        "".to_string()
     }
 }

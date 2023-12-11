@@ -45,6 +45,7 @@ lazy_static!
         set.insert("label", CommandType::LABEL);
         set.insert("setlabelheight", CommandType::SET_LABEL_HEIGHT);
         set.insert("setturtle", CommandType::SET_TURTLE);
+        set.insert("window", CommandType::WINDOW);
         set
     };
 
@@ -62,6 +63,7 @@ lazy_static!
         set.insert("showturtle", CommandType::SHOW_TURTLE);
         set.insert("st", CommandType::SHOW_TURTLE);
         set.insert("stop", CommandType::STOP);
+        set.insert("window", CommandType::WINDOW);
         set
     };
 }
@@ -85,7 +87,8 @@ pub enum CommandType
     SHOW_TURTLE,
     LABEL,
     SET_LABEL_HEIGHT,
-    SET_TURTLE
+    SET_TURTLE,
+    WINDOW
 }
 
 pub enum CodeBlockType
@@ -381,7 +384,7 @@ pub fn read_expression(iter: &mut std::iter::Peekable<std::str::Chars<'_>>) -> V
                 current_symbol.clear();
             }
         }
-        else if next_char == ':'
+        else if next_char == ':' || next_char == '\"'
         {
             reading_variable = true;
         }
