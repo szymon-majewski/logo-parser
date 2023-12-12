@@ -1,5 +1,5 @@
 <svg width="1100" height="600" xmlns="http://www.w3.org/2000/svg">
-	<rect width="100%" height="100%" style="fill:rgb(255,255,255);stroke-width:3;stroke:rgb(0,0,0)" />
+	<rect width="100%" height="100%" style="fill:rgb(255,255,255);stroke-width:10;stroke:rgb(0,0,0)" />
 	<line x1="550" y1="300" x2="550" y2="250" style="stroke:rgb(0,0,0);stroke-width:1" />
 	<line x1="550" y1="250" x2="533.3333" y2="221.13249" style="stroke:rgb(0,0,0);stroke-width:1" />
 	<line x1="533.3333" y1="221.13249" x2="514.0883" y2="210.02138" style="stroke:rgb(0,0,0);stroke-width:1" />

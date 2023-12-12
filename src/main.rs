@@ -41,7 +41,7 @@ fn main()
     let mut logo_codes: Vec<String> = vec!();
     for logo_file_path in logo_file_paths
     {
-        let mut code = read_code_from_file(logo_file_path);
+        let mut code = read_code_from_file(logo_file_path).replace("repcount", ":repcount");
         code.push(' ');
         logo_codes.push(code);
     }
