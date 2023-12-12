@@ -161,13 +161,13 @@ impl CodeBlock
 
 pub struct Procedure
 {
-    pub call_parameters: HashMap<String, i32>
+    pub call_parameters: LinkedList<String>
 }
 impl Procedure
 {
     fn new() -> Self
     {
-        Self { call_parameters: HashMap::new() }
+        Self { call_parameters: LinkedList::new() }
     }
 }
 
@@ -244,6 +244,7 @@ pub fn parse_logo_code(code: &str) -> HashMap<String, CodeBlock>
                             {
                                 let parsed_expression = read_expression(&mut code_iterator);
                                 let loop_repeats = parsed_expression.iter().map(|s| s.as_str()).collect();
+                                println!("{:?}", loop_repeats);
                                 let mut new_loop = CodeBlock::new(CodeBlockType::LOOP(Loop::new(Expression::new(loop_repeats))));
                                 current_code_block.add_instruction(ParserSymbol::CODE_BLOCK(new_loop));
                                 let last_instruction;
@@ -260,6 +261,7 @@ pub fn parse_logo_code(code: &str) -> HashMap<String, CodeBlock>
                             {
                                 let parsed_expression = read_expression(&mut code_iterator);
                                 let if_condition = parsed_expression.iter().map(|s| s.as_str()).collect();
+                                println!("{:?}", if_condition);
                                 let mut new_if = CodeBlock::new(CodeBlockType::IF(If::new(Expression::new(if_condition))));
                                 current_code_block.add_instruction(ParserSymbol::CODE_BLOCK(new_if));
                                 let last_instruction;
@@ -284,19 +286,19 @@ pub fn parse_logo_code(code: &str) -> HashMap<String, CodeBlock>
                     {
                         let parameter = read_expression(&mut code_iterator);
                         let parameter_str = parameter.iter().map(|s| s.as_str()).collect();
+                        println!("{:?}", parameter_str);
                         current_code_block.add_instruction(ParserSymbol::COMMAND(Command::new(*COMMANDS.get(current_symbol.as_str()).unwrap(),
                                                                                Expression::new(parameter_str))));
                     }
                     else if procedures_info.contains_key(current_symbol.as_str())
                     {
-                        //TODO: read procedure parameters
                         let call_parameters_count = *procedures_info.get(current_symbol.as_str()).unwrap();
-                        println!("{call_parameters_count}");
                         let mut call_parameters = LinkedList::new();
                         for _ in 0..call_parameters_count
                         {
                             let parameter = read_expression(&mut code_iterator);
                             let parameter_str = parameter.iter().map(|s| s.as_str()).collect();
+                            println!("{:?}", parameter_str);
                             call_parameters.push_back(Expression::new(parameter_str));
                         }
                         current_code_block.add_instruction(ParserSymbol::PROCEDURE_CALL(ProcedureCall{ procedure_name: current_symbol.clone(), parameter_expressions: call_parameters}));
@@ -340,7 +342,7 @@ pub fn parse_logo_code(code: &str) -> HashMap<String, CodeBlock>
                     {
                         if let CodeBlockType::PROCEDURE(ref mut procedure) = &mut current_code_block.code_block_type 
                         {
-                            procedure.call_parameters.insert(current_symbol[1..].to_string(), 0);
+                            procedure.call_parameters.push_back(current_symbol[1..].to_string());
                         }
                         current_symbol.clear();
                     }
@@ -370,6 +372,7 @@ pub fn parse_logo_code(code: &str) -> HashMap<String, CodeBlock>
 pub fn read_expression(iter: &mut std::iter::Peekable<std::str::Chars<'_>>) -> Vec<String>
 {
     let mut reading_variable = false;
+    let mut can_read_value = true;
     let mut current_symbol = String::new();
     let mut result: Vec<String> = Vec::new();
 
@@ -380,22 +383,41 @@ pub fn read_expression(iter: &mut std::iter::Peekable<std::str::Chars<'_>>) -> V
             reading_variable = false;
             if current_symbol.len() > 0
             {
+                can_read_value = false;
                 result.push(current_symbol.clone());
                 current_symbol.clear();
             }
         }
         else if next_char == ':' || next_char == '\"'
         {
+            if !can_read_value { break; }
             reading_variable = true;
         }
-        else if next_char.is_numeric() || (next_char.is_alphabetic() && reading_variable)
+        else if next_char.is_numeric() || next_char == '.' || (next_char.is_alphabetic() && reading_variable)
         {
+            if !can_read_value { break; }
             current_symbol.push(next_char);
+        }
+        else if next_char == '-'
+        {
+            if can_read_value { current_symbol.push(next_char); }
+            else 
+            {
+                reading_variable = false;
+                can_read_value = true;
+                if current_symbol.len() > 0
+                {
+                    result.push(current_symbol.clone());
+                    current_symbol.clear();
+                }
+                result.push(next_char.to_string());
+            }
         }
         else if expression::OPERATORS.contains_key(next_char.to_string().as_str()) ||
                 next_char == '(' || next_char == ')'
         {
             reading_variable = false;
+            can_read_value = true;
             if current_symbol.len() > 0
             {
                 result.push(current_symbol.clone());

@@ -5,8 +5,8 @@ use std::f32::consts::PI;
 
 struct Turtle
 {
-    x: i32,
-    y: i32,
+    x: f32,
+    y: f32,
     dir_x: f32,
     dir_y: f32,
     lifted: bool,
@@ -28,10 +28,10 @@ impl Turtle
 
 pub fn execute_logo_program(procedures: HashMap<String, CodeBlock>) -> String
 {
-    let canvas_width = 1000;
-    let canvas_height = 500;
+    let canvas_width = 1100;
+    let canvas_height = 600;
     //let canvas_offset = 50;
-    let mut turtle = Turtle{ x: canvas_width / 2, y: canvas_height / 2, dir_x: 0.0, dir_y: -1.0, lifted: false, label_height: 100 };
+    let mut turtle = Turtle{ x: canvas_width as f32 / 2.0, y: canvas_height as f32 / 2.0, dir_x: 0.0, dir_y: -1.0, lifted: false, label_height: 100 };
     let mut svg = format!("<svg width=\"{}\" height=\"{}\" xmlns=\"http://www.w3.org/2000/svg\">\n\t<rect width=\"100%\" height=\"100%\" style=\"fill:rgb(255,255,255);stroke-width:3;stroke:rgb(0,0,0)\" />", canvas_width, canvas_height);
 
     let MAIN_PROCEDURE_NAME = "_".to_string(); // this should be taken from parser
@@ -41,22 +41,21 @@ pub fn execute_logo_program(procedures: HashMap<String, CodeBlock>) -> String
     format!("{svg}\n</svg>")
 }
 
-fn execute_instruction(instruction: &ParserSymbol, svg: &mut String, procedures: &HashMap<String, CodeBlock>, turtle: &mut Turtle, variables: &mut HashMap<String, i32>, stop: &mut bool)
+fn execute_instruction(instruction: &ParserSymbol, svg: &mut String, procedures: &HashMap<String, CodeBlock>, turtle: &mut Turtle, variables: &mut HashMap<String, f32>, stop: &mut bool)
 {
     match instruction
     {
         ParserSymbol::PROCEDURE_CALL(procedure_call) =>
         {
-            println!("PROCEDURE_CALL");
-            println!("{}", &procedure_call.procedure_name);
+            println!("PROCEDURE_CALL {}", &procedure_call.procedure_name);
             //println!("{:?}", procedures);
             let procedure = procedures.get(&procedure_call.procedure_name).unwrap();
-            let mut procedure_variables: HashMap<String, i32> = HashMap::new();
+            let mut procedure_variables: HashMap<String, f32> = HashMap::new();
             if let CodeBlockType::PROCEDURE(procedure) = &procedure.code_block_type 
             {
                 for call_parameter in procedure.call_parameters.iter().zip(procedure_call.parameter_expressions.iter())
                 {
-                    procedure_variables.insert(call_parameter.0.0.clone(), call_parameter.1.evaluate(variables));
+                    procedure_variables.insert(call_parameter.0.clone(), call_parameter.1.evaluate(variables));
                 }
             }
 
@@ -72,11 +71,11 @@ fn execute_instruction(instruction: &ParserSymbol, svg: &mut String, procedures:
             {
                 CodeBlockType::LOOP(my_loop) =>
                 {
-                    println!("LOOP");
-                    let repeats = my_loop.repeats.evaluate(variables);
+                    let repeats = my_loop.repeats.evaluate(variables).round() as i32;
+                    println!("LOOP {}", repeats);
                     for i in 0..(repeats)
                     {
-                        variables.insert("repcount".to_string(), i);
+                        variables.insert("repcount".to_string(), i as f32);
                         for loop_instruction in code_block.get_instructions().iter()
                         {
                             execute_instruction(loop_instruction, svg, procedures, turtle, variables, stop);
@@ -86,8 +85,9 @@ fn execute_instruction(instruction: &ParserSymbol, svg: &mut String, procedures:
                 }
                 CodeBlockType::IF(my_if) =>
                 {
-                    println!("IF");
-                    if my_if.condition.evaluate(variables) != 0
+                    let condition = my_if.condition.evaluate(variables) != 0.0;
+                    println!("IF {}", condition);
+                    if condition
                     {
                         for if_instruction in code_block.get_instructions().iter()
                         {
@@ -105,10 +105,10 @@ fn execute_instruction(instruction: &ParserSymbol, svg: &mut String, procedures:
             {
                 CommandType::FORWARD =>
                 {
-                    println!("FD");
                     let distance = command.call_parameter.evaluate(variables);
-                    let new_x = turtle.x + (turtle.dir_x * distance as f32) as i32;
-                    let new_y = turtle.y + (turtle.dir_y * distance as f32) as i32;
+                    println!("FD {}", distance);
+                    let new_x = turtle.x + (turtle.dir_x * distance);
+                    let new_y = turtle.y + (turtle.dir_y * distance);
                     if !turtle.lifted
                     {
                         svg.push_str(&format!("\n\t<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" style=\"stroke:rgb(0,0,0);stroke-width:1\" />", turtle.x, turtle.y, new_x, new_y));
@@ -118,10 +118,10 @@ fn execute_instruction(instruction: &ParserSymbol, svg: &mut String, procedures:
                 }
                 CommandType::BACKWARD =>
                 {
-                    println!("BK");
                     let distance = command.call_parameter.evaluate(variables);
-                    let new_x = turtle.x - (turtle.dir_x * distance as f32) as i32;
-                    let new_y = turtle.y - (turtle.dir_y * distance as f32) as i32;
+                    println!("BK {}", distance);
+                    let new_x = turtle.x - (turtle.dir_x * distance);
+                    let new_y = turtle.y - (turtle.dir_y * distance);
                     if !turtle.lifted
                     {
                         svg.push_str(&format!("\n\t<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" style=\"stroke:rgb(0,0,0);stroke-width:1\" />", turtle.x, turtle.y, new_x, new_y));
@@ -131,15 +131,15 @@ fn execute_instruction(instruction: &ParserSymbol, svg: &mut String, procedures:
                 }
                 CommandType::TURN_RIGHT =>
                 {
-                    println!("RT");
-                    let turn_degrees = (command.call_parameter.evaluate(variables) % 360) as f32;
+                    let turn_degrees = command.call_parameter.evaluate(variables) % 360.0;
+                    println!("RT {}", turn_degrees);
                     turtle.rotate_right(turn_degrees);
                 }
                 CommandType::TURN_LEFT =>
                 {
-                    println!("LT");
-                    let turn_degrees = (command.call_parameter.evaluate(variables) % 360) as f32;
-                    turtle.rotate_right(-turn_degrees);
+                    let turn_degrees = command.call_parameter.evaluate(variables) % 360.0;
+                    println!("LT {}", turn_degrees);
+                    turtle.rotate_right(360.0-turn_degrees);
                 }
                 CommandType::PEN_UP =>
                 {
@@ -158,7 +158,7 @@ fn execute_instruction(instruction: &ParserSymbol, svg: &mut String, procedures:
                 CommandType::SET_LABEL_HEIGHT =>
                 {
                     println!("SET_LABEL_HEIGHT");
-                    turtle.label_height = command.call_parameter.evaluate(variables);
+                    turtle.label_height = command.call_parameter.evaluate(variables).round() as i32;
                 }
                 CommandType::LABEL =>
                 {

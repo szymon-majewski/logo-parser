@@ -26,17 +26,17 @@ fn save_to_svg_file(file_path: &str, code: String)
 
 fn main() 
 {
-    let logo_file_paths = [//"resources/star.logo",
+    let logo_file_paths = ["resources/star.logo",
 						   //"resources/colored_squares.logo",
 						   "resources/logo_spiral.logo",
-						   //"resources/tree.logo",
-						   //"resources/fern.logo",
+						   "resources/tree.logo",
+						   "resources/fern.logo",
 						   /*"resources/turtle_race.logo",*/];
-    let svg_file_paths = [//"svg/star.svg",
+    let svg_file_paths = ["svg/star.svg",
 						   //"svg/colored_squares.svg",
 						   "svg/logo_spiral.svg",
-						   //"svg/tree.svg",
-						   //"svg/fern.svg",
+						   "svg/tree.svg",
+						   "svg/fern.svg",
 						   /*"svg/turtle_race.svg",*/];
     let mut logo_codes: Vec<String> = vec!();
     for logo_file_path in logo_file_paths

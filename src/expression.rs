@@ -19,7 +19,7 @@ lazy_static!
 enum ExpressionSymbol
 {
     VARIABLE(String),
-    CONSTANT(i32),
+    CONSTANT(f32),
     OPERATOR(String),
     BRACKET_OPENING,
     BRACKET_CLOSING
@@ -39,9 +39,9 @@ impl Expression
         Self { postifx_symbol_list }
     }
 
-    pub fn evaluate(&self, variables: &HashMap<String, i32>) -> i32
+    pub fn evaluate(&self, variables: &HashMap<String, f32>) -> f32
     {
-        let mut stack: Vec<i32> = vec!();
+        let mut stack: Vec<f32> = vec!();
         for symbol in self.postifx_symbol_list.iter()
         {
             match symbol
@@ -52,8 +52,8 @@ impl Expression
                 }
                 ExpressionSymbol::VARIABLE(variable) =>
                 {
-                    println!("{variable}");
-                    println!("{:?}", variables);
+                    // println!("{variable}");
+                    // println!("{:?}", variables);
                     stack.push(*variables.get(variable).unwrap());
                 }
                 ExpressionSymbol::OPERATOR(operator) =>
@@ -67,7 +67,7 @@ impl Expression
                         "-" => { stack.push(x - y); }
                         "*" => { stack.push(x * y); }
                         "/" => { stack.push(x / y); }
-                        "<" => { if x < y { stack.push(1); } else { stack.push(0); } }
+                        "<" => { if x < y { stack.push(1.0); } else { stack.push(0.0); } }
                         _ => {}
                     }
                 }
@@ -94,9 +94,9 @@ impl Expression
             {
                 result.push_back(ExpressionSymbol::BRACKET_CLOSING);
             }
-            else if expression_symbol.chars().all(char::is_numeric)
+            else if expression_symbol.chars().all(|c| c.is_numeric() || c == '.' || c == '-')
             { // Constant
-                result.push_back(ExpressionSymbol::CONSTANT(expression_symbol.parse::<i32>().unwrap()));
+                result.push_back(ExpressionSymbol::CONSTANT(expression_symbol.parse::<f32>().unwrap()));
             }
             else 
             { // Variable
