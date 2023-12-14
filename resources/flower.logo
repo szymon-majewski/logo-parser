@@ -1,0 +1,5 @@
+repeat 18 [
+    setcolor pick [ red yellow blue ]
+    forward 120
+    right 100
+]

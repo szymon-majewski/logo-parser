@@ -1,0 +1,8 @@
+to move
+    repeat 34 [ fd 12 rt 10 ] rt 90
+end
+
+repeat 400 
+[
+    move
+]

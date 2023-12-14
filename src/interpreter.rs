@@ -1,6 +1,5 @@
 use std::collections::{ HashMap, LinkedList };
-use crate::parser::{ self, CodeBlock, ParserSymbol, ProcedureCall, CodeBlockType, CommandType, Command };
-use crate::Expression;
+use crate::parser::{ CodeBlock, ParserSymbol, ProcedureCall, CodeBlockType, CommandType };
 use std::f32::consts::PI;
 
 struct Turtle
@@ -10,9 +9,8 @@ struct Turtle
     dir_x: f32,
     dir_y: f32,
     lifted: bool,
-    label_height: i32
-    // Unnecessary?
-    // hidden: false
+    label_height: i32,
+    stroke_color: String
 }
 impl Turtle
 {
@@ -33,10 +31,9 @@ pub fn execute_logo_program(procedures: HashMap<String, CodeBlock>) -> String
     //let canvas_offset = 50;
     let mut turtles: Vec<Turtle> = vec!
     [
-        Turtle{ x: canvas_width as f32 / 2.0, y: canvas_height as f32 / 2.0, dir_x: 0.0, dir_y: -1.0, lifted: false, label_height: 100 },
-        Turtle{ x: canvas_width as f32 / 2.0, y: canvas_height as f32 / 2.0, dir_x: 0.0, dir_y: -1.0, lifted: false, label_height: 100 }
+        Turtle{ x: canvas_width as f32 / 2.0, y: canvas_height as f32 / 2.0, dir_x: 0.0, dir_y: -1.0, lifted: false, label_height: 100, stroke_color: "black".to_string() },
+        Turtle{ x: canvas_width as f32 / 2.0, y: canvas_height as f32 / 2.0, dir_x: 0.0, dir_y: -1.0, lifted: false, label_height: 100, stroke_color: "black".to_string() }
     ];
-    
     let mut svg = format!("<svg width=\"{}\" height=\"{}\" xmlns=\"http://www.w3.org/2000/svg\">\n\t<rect width=\"100%\" height=\"100%\" style=\"fill:rgb(255,255,255);stroke-width:10;stroke:rgb(0,0,0)\" />", canvas_width, canvas_height);
 
     let MAIN_PROCEDURE_NAME = "_".to_string(); // this should be taken from parser
@@ -116,7 +113,7 @@ fn execute_instruction(instruction: &ParserSymbol, svg: &mut String, procedures:
                     let new_y = turtles[*current_turtle].y + (turtles[*current_turtle].dir_y * distance);
                     if !turtles[*current_turtle].lifted
                     {
-                        svg.push_str(&format!("\n\t<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" style=\"stroke:rgb(0,0,0);stroke-width:1\" />", turtles[*current_turtle].x, turtles[*current_turtle].y, new_x, new_y));
+                        svg.push_str(&format!("\n\t<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" style=\"stroke:{};stroke-width:1\" />", turtles[*current_turtle].x, turtles[*current_turtle].y, new_x, new_y, turtles[*current_turtle].stroke_color));
                     }
                     turtles[*current_turtle].x = new_x;
                     turtles[*current_turtle].y = new_y;
@@ -129,7 +126,7 @@ fn execute_instruction(instruction: &ParserSymbol, svg: &mut String, procedures:
                     let new_y = turtles[*current_turtle].y - (turtles[*current_turtle].dir_y * distance);
                     if !turtles[*current_turtle].lifted
                     {
-                        svg.push_str(&format!("\n\t<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" style=\"stroke:rgb(0,0,0);stroke-width:1\" />", turtles[*current_turtle].x, turtles[*current_turtle].y, new_x, new_y));
+                        svg.push_str(&format!("\n\t<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" style=\"stroke:{};stroke-width:1\" />", turtles[*current_turtle].x, turtles[*current_turtle].y, new_x, new_y, turtles[*current_turtle].stroke_color));
                     }
                     turtles[*current_turtle].x = new_x;
                     turtles[*current_turtle].y = new_y;
@@ -170,14 +167,18 @@ fn execute_instruction(instruction: &ParserSymbol, svg: &mut String, procedures:
                     println!("LABEL");
                     let text = command.call_parameter.text_literal();
                     let rotation_angle = (turtles[*current_turtle].dir_y.atan2(turtles[*current_turtle].dir_x) * 180.0 / PI).round();
-                    svg.push_str(&format!("\n\t<text x=\"{}\" y=\"{}\" fill=\"black\" font-size=\"{}\" font-family=\"Arial\" transform=\"rotate({} {},{})\">{}</text>",
-                                                 turtles[*current_turtle].x, turtles[*current_turtle].y, turtles[*current_turtle].label_height, rotation_angle, turtles[*current_turtle].x, turtles[*current_turtle].y, text));
+                    svg.push_str(&format!("\n\t<text x=\"{}\" y=\"{}\" fill=\"{}\" font-size=\"{}\" font-family=\"Arial\" transform=\"rotate({} {},{})\">{}</text>",
+                                                 turtles[*current_turtle].x, turtles[*current_turtle].y, turtles[*current_turtle].stroke_color, turtles[*current_turtle].label_height, rotation_angle, turtles[*current_turtle].x, turtles[*current_turtle].y, text));
                 }
                 CommandType::SET_TURTLE =>
                 {
-                    *current_turtle = command.call_parameter.evaluate(variables).round() as usize;
+                    *current_turtle = command.call_parameter.evaluate(variables).round() as usize - 1;
                 }
-                
+                CommandType::SET_COLOR =>
+                {
+                    let color = command.call_parameter.evaluate_setcolor();
+                    turtles[*current_turtle].stroke_color = color;
+                }
                 CommandType::CLEAR_SCREEN | CommandType::HIDE_TURTLE | 
                 CommandType::SHOW_TURTLE | CommandType::WINDOW | 
                 CommandType::WAIT => {}

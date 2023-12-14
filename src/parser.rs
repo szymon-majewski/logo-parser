@@ -428,5 +428,42 @@ pub fn read_expression(iter: &mut std::iter::Peekable<std::str::Chars<'_>>) -> V
         else { break; }
         iter.next();
     }
+
+    // Function command (pick or random)
+    if result.len() == 0
+    {
+        while let Some(next_char) = iter.next()
+        {
+            if next_char == ' ' 
+            { 
+                result.push(current_symbol.clone());
+                break; 
+            }
+            current_symbol.push(next_char);
+        }
+
+        if current_symbol == "random"
+        {
+            let mut parameter = read_expression(iter);
+            result.append(&mut parameter);
+        }
+        else if current_symbol == "pick"
+        {
+            current_symbol.clear();
+            while let Some(next_char) = iter.next()
+            {
+                if next_char == ']' { break; }
+                if next_char == ' ' && current_symbol.len() > 0
+                {
+                    result.push(current_symbol.clone());
+                    current_symbol.clear();
+                }
+                else if next_char != '['
+                {
+                    current_symbol.push(next_char);
+                }
+            }
+        }
+    }
     result
 }

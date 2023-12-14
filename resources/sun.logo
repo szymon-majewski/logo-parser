@@ -1,0 +1,12 @@
+repeat 720
+[
+    setcolor pick [ red orange yellow green blue violet ]
+    pu
+    rt 0.5
+    fd 30
+    pd
+    fd 200
+    pu
+    bk 230
+    pd
+]

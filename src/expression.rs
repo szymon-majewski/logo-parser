@@ -1,4 +1,5 @@
-use std::collections::{ LinkedList, HashMap };
+use std::collections::{ LinkedList, HashMap, HashSet };
+use rand::Rng;
 use lazy_static::lazy_static;
 
 lazy_static! 
@@ -13,6 +14,14 @@ lazy_static!
         map.insert("<", 0i8);
         map
     };
+
+    static ref FUNCTION_COMMANDS: HashSet<&'static str> =
+    {
+        let mut set = HashSet::new();
+        set.insert("pick");
+        set.insert("random");
+        set
+    };
 }
 
 #[derive(Clone)]
@@ -22,7 +31,8 @@ enum ExpressionSymbol
     CONSTANT(f32),
     OPERATOR(String),
     BRACKET_OPENING,
-    BRACKET_CLOSING
+    BRACKET_CLOSING,
+    FUNCTION_COMMAND(String)
 }
 
 pub struct Expression
@@ -34,13 +44,55 @@ impl Expression
 {
     pub fn new(expression_str: Vec<&str>) -> Self
     {
-        let infix_symbol_list = Expression::create_list_of_expression_symbols(expression_str);
-        let postifx_symbol_list = Expression::infix_to_postfix(infix_symbol_list);
-        Self { postifx_symbol_list }
+        if expression_str.len() > 0
+        {
+            let is_function_command = FUNCTION_COMMANDS.contains(expression_str.first().unwrap());
+            let infix_symbol_list = Expression::create_list_of_expression_symbols(expression_str);
+            if !is_function_command
+            {
+                let postifx_symbol_list = Expression::infix_to_postfix(infix_symbol_list);
+                Self { postifx_symbol_list }
+            }
+            else 
+            {
+                Self { postifx_symbol_list: infix_symbol_list }
+            }
+        }
+        else
+        {
+            Self { postifx_symbol_list: LinkedList::new() }    
+        }
+    }
+
+    pub fn evaluate_setcolor(&self) -> String
+    {
+        let high_bound = self.postifx_symbol_list.len() - 1;
+        let picked_idx = rand::thread_rng().gen_range(0..high_bound);
+        if let ExpressionSymbol::VARIABLE(color) = self.postifx_symbol_list.iter().nth(picked_idx + 1).unwrap()
+        {
+            return color.clone()
+        }
+        panic!();
     }
 
     pub fn evaluate(&self, variables: &HashMap<String, f32>) -> f32
     {
+        if let ExpressionSymbol::FUNCTION_COMMAND(function_command) = self.postifx_symbol_list.front().unwrap()
+        {
+            match function_command.as_str()
+            {
+                "random" =>
+                {
+                    if let ExpressionSymbol::CONSTANT(high_bound) = self.postifx_symbol_list.iter().nth(1).unwrap()
+                    {
+                        let picked_number = rand::thread_rng().gen_range(0..*high_bound as i32);
+                        return picked_number as f32;
+                    }
+                }
+                _ => {}
+            }
+        }
+
         let mut stack: Vec<f32> = vec!();
         for symbol in self.postifx_symbol_list.iter()
         {
@@ -97,6 +149,10 @@ impl Expression
             else if expression_symbol.chars().all(|c| c.is_numeric() || c == '.' || c == '-')
             { // Constant
                 result.push_back(ExpressionSymbol::CONSTANT(expression_symbol.parse::<f32>().unwrap()));
+            }
+            else if FUNCTION_COMMANDS.contains(expression_symbol)
+            {
+                result.push_back(ExpressionSymbol::FUNCTION_COMMAND(expression_symbol.to_string()));
             }
             else 
             { // Variable
@@ -157,6 +213,7 @@ impl Expression
                     }
                     stack.push(symbol.clone());
                 }
+                _ => {}
             }
         }
         while let Some(remaining_symbol) = stack.pop()
